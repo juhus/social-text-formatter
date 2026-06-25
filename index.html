@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinkedIn Formatter</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --paper: #FBFAF7;
+            --ink: #1A1D1A;
+            --muted: #6B6F69;
+            --line: #E6E3DC;
+            --accent: #0E7A5F;
+            --accent-soft: #E3F0EB;
+            --warn: #B4471F;
+            --field: #FFFFFF;
+            --ui: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+            --mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+            --body: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            --radius: 10px;
+        }
+
+        * {
+            box-sizing: border-box
+        }
+
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            background: var(--paper);
+            color: var(--ink)
+        }
+
+        body {
+            font-family: var(--ui);
+            -webkit-font-smoothing: antialiased;
+            line-height: 1.4
+        }
+
+        .wrap {
+            max-width: 760px;
+            margin: 0 auto;
+            padding: 18px 18px 28px
+        }
+
+        /* Header */
+        header {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 14px
+        }
+
+        .eyebrow {
+            font-size: 11px;
+            letter-spacing: .14em;
+            text-transform: uppercase;
+            color: var(--accent);
+            font-weight: 600
+        }
+
+        h1 {
+            font-size: 19px;
+            font-weight: 600;
+            margin: 2px 0 0;
+            letter-spacing: -.01em
+        }
+
+        .counts {
+            font-family: var(--mono);
+            font-size: 12px;
+            color: var(--muted);
+            text-align: right;
+            line-height: 1.6;
+            white-space: nowrap
+        }
+
+        .counts b {
+            color: var(--ink);
+            font-weight: 500
+        }
+
+        .counts .over {
+            color: var(--warn)
+        }
+
+        /* Toolbar */
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 10px
+        }
+
+        .tool {
+            appearance: none;
+            border: 1px solid var(--line);
+            background: var(--field);
+            color: var(--ink);
+            border-radius: 8px;
+            padding: 7px 10px;
+            cursor: pointer;
+            font-family: var(--ui);
+            font-size: 13px;
+            font-weight: 500;
+            line-height: 1;
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            transition: transform .06s ease, border-color .12s ease, background .12s ease
+        }
+
+        .tool:hover {
+            border-color: var(--accent);
+            background: var(--accent-soft)
+        }
+
+        .tool:active {
+            transform: translateY(1px)
+        }
+
+        .tool:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px
+        }
+
+        .tool .spec {
+            font-size: 16px;
+            line-height: 1;
+            min-width: 14px;
+            text-align: center
+        }
+
+        .tool .lbl {
+            font-size: 12px;
+            color: var(--muted)
+        }
+
+        .sep {
+            width: 1px;
+            align-self: stretch;
+            background: var(--line);
+            margin: 2px 2px
+        }
+
+        .tool.solid {
+            background: var(--accent);
+            color: #fff;
+            border-color: var(--accent)
+        }
+
+        .tool.solid:hover {
+            background: #0a6650
+        }
+
+        .tool.solid .lbl {
+            color: #d9efe8
+        }
+
+        /* Editor */
+        .editor {
+            width: 100%;
+            min-height: 200px;
+            resize: vertical;
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            background: var(--field);
+            padding: 14px 15px;
+            font-family: var(--body);
+            font-size: 15px;
+            line-height: 1.55;
+            color: var(--ink);
+            transition: border-color .12s ease
+        }
+
+        .editor:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-soft)
+        }
+
+        .editor::placeholder {
+            color: #aeb0a8
+        }
+
+        .hint {
+            font-size: 12px;
+            color: var(--muted);
+            margin: 8px 2px 0;
+            line-height: 1.5
+        }
+
+        .hint code {
+            font-family: var(--mono);
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 4px;
+            padding: 1px 5px;
+            font-size: 11px
+        }
+
+        /* Preview */
+        .preview-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 22px 2px 8px
+        }
+
+        .preview-head .eyebrow {
+            color: var(--muted)
+        }
+
+        .toggle {
+            font-family: var(--mono);
+            font-size: 11px;
+            color: var(--accent);
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px 2px
+        }
+
+        .toggle:hover {
+            text-decoration: underline
+        }
+
+        .card {
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: #fff;
+            padding: 16px;
+            box-shadow: 0 1px 2px rgba(26, 29, 26, .04)
+        }
+
+        .card-top {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 11px
+        }
+
+        .ava {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent), #0a4d3c);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 15px;
+            flex: 0 0 40px
+        }
+
+        .who .nm {
+            font-size: 14px;
+            font-weight: 600;
+            line-height: 1.2
+        }
+
+        .who .mt {
+            font-size: 12px;
+            color: var(--muted);
+            line-height: 1.3
+        }
+
+        .post {
+            font-family: var(--body);
+            font-size: 14px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            color: var(--ink)
+        }
+
+        .more {
+            color: var(--muted);
+            cursor: pointer
+        }
+
+        .more:hover {
+            color: var(--accent)
+        }
+
+        .empty {
+            color: #aeb0a8;
+            font-style: italic
+        }
+
+        /* Actions */
+        .actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+            flex-wrap: wrap
+        }
+
+        .btn {
+            appearance: none;
+            border-radius: 9px;
+            padding: 11px 16px;
+            cursor: pointer;
+            font-family: var(--ui);
+            font-size: 14px;
+            font-weight: 600;
+            border: 1px solid var(--line);
+            background: var(--field);
+            color: var(--ink);
+            transition: transform .06s ease, background .12s ease, border-color .12s ease
+        }
+
+        .btn:active {
+            transform: translateY(1px)
+        }
+
+        .btn:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px
+        }
+
+        .btn.primary {
+            background: var(--accent);
+            color: #fff;
+            border-color: var(--accent)
+        }
+
+        .btn.primary:hover {
+            background: #0a6650
+        }
+
+        .btn.ghost:hover {
+            border-color: var(--accent);
+            color: var(--accent)
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            left: 50%;
+            bottom: 22px;
+            transform: translateX(-50%) translateY(14px);
+            background: var(--ink);
+            color: #fff;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity .2s ease, transform .2s ease;
+            z-index: 50
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0)
+        }
+
+        @media (max-width:480px) {
+            .tool .lbl {
+                display: none
+            }
+
+            h1 {
+                font-size: 17px
+            }
+        }
+
+        @media (prefers-reduced-motion:reduce) {
+            * {
+                transition: none !important
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrap">
+        <header>
+            <div>
+                <div class="eyebrow">LinkedIn formatter</div>
+                <h1>Write it here, paste it formatted</h1>
+            </div>
+            <div class="counts" id="counts">
+                <div><b id="cChars">0</b> characters</div>
+                <div><b id="cLines">0</b> lines</div>
+            </div>
+        </header>
+
+        <div class="toolbar" id="toolbar">
+            <button class="tool" data-act="bold" title="Bold (select text first)"><span class="spec">𝗔</span><span
+                    class="lbl">Bold</span></button>
+            <button class="tool" data-act="italic" title="Italic"><span class="spec">𝘈</span><span
+                    class="lbl">Italic</span></button>
+            <button class="tool" data-act="bolditalic" title="Bold italic"><span class="spec">𝘼</span><span
+                    class="lbl">Bold italic</span></button>
+            <button class="tool" data-act="mono" title="Monospace"><span class="spec">𝙰</span><span
+                    class="lbl">Mono</span></button>
+            <button class="tool" data-act="strike" title="Strikethrough"><span class="spec">S&#822;</span><span
+                    class="lbl">Strike</span></button>
+            <div class="sep"></div>
+            <button class="tool" data-act="bullet" title="Bullet list"><span class="spec">•</span><span
+                    class="lbl">Bullets</span></button>
+            <button class="tool" data-act="check" title="Checkmark list"><span class="spec">✓</span><span
+                    class="lbl">Checks</span></button>
+            <button class="tool" data-act="arrow" title="Arrow list"><span class="spec">→</span><span
+                    class="lbl">Arrows</span></button>
+            <button class="tool" data-act="number" title="Numbered list"><span class="spec">1.</span><span
+                    class="lbl">Numbered</span></button>
+            <div class="sep"></div>
+            <button class="tool" data-act="clearfmt" title="Remove formatting from selection"><span
+                    class="spec">A</span><span class="lbl">Plain</span></button>
+            <button class="tool solid" data-act="markdown" title="Convert all **markdown** at once"><span
+                    class="spec">↻</span><span class="lbl">Convert markdown</span></button>
+        </div>
+
+        <textarea class="editor" id="editor" placeholder="Type or paste your post.
+
+Select a few words, then hit Bold or Italic — they turn into Unicode characters LinkedIn keeps when you paste.
+
+Or write with **markdown**, *italics* and - dashes, then hit Convert markdown."></textarea>
+
+        <div class="hint">
+            Tip: highlight text, then click a style. Or write <code>**bold**</code>, <code>*italic*</code>,
+            <code>~~strike~~</code>, <code>- bullets</code> and hit <b>Convert markdown</b>. LinkedIn shows <b>…more</b>
+            after ~210 characters and caps posts at <b>3,000</b>.
+        </div>
+
+        <div class="preview-head">
+            <div class="eyebrow">Feed preview</div>
+            <button class="toggle" id="toggleTrunc">show truncated</button>
+        </div>
+        <div class="card">
+            <div class="card-top">
+                <div class="ava" id="ava">JH</div>
+                <div class="who">
+                    <div class="nm" id="who-nm">Your name</div>
+                    <div class="mt">Now · 🌐</div>
+                </div>
+            </div>
+            <div class="post" id="preview"><span class="empty">Your formatted post appears here…</span></div>
+        </div>
+
+        <div class="actions">
+            <button class="btn primary" id="copyBtn">Copy formatted text</button>
+            <button class="btn ghost" id="clearBtn">Clear</button>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        (function () {
+            "use strict";
+            const ed = document.getElementById('editor');
+            const preview = document.getElementById('preview');
+            const cChars = document.getElementById('cChars');
+            const cLines = document.getElementById('cLines');
+            const toastEl = document.getElementById('toast');
+            let truncatePreview = true;
+
+            // ---- Unicode style maps ----
+            const MAPS = {
+                bold: { U: 0x1D5D4, L: 0x1D5EE, D: 0x1D7EC },
+                italic: { U: 0x1D608, L: 0x1D622, D: null },
+                bolditalic: { U: 0x1D63C, L: 0x1D656, D: null },
+                mono: { U: 0x1D670, L: 0x1D68A, D: 0x1D7F6 }
+            };
+            const RANGES = [
+                [0x1D5D4, 0x1D5ED, 65], [0x1D5EE, 0x1D607, 97], [0x1D7EC, 0x1D7F5, 48],
+                [0x1D608, 0x1D621, 65], [0x1D622, 0x1D63B, 97],
+                [0x1D63C, 0x1D655, 65], [0x1D656, 0x1D66F, 97],
+                [0x1D670, 0x1D689, 65], [0x1D68A, 0x1D6A3, 97], [0x1D7F6, 0x1D7FF, 48]
+            ];
+            const STRIKE = '\u0336';
+
+            function styleText(text, style) {
+                const m = MAPS[style];
+                let out = '';
+                for (const ch of text) {
+                    const c = ch.codePointAt(0);
+                    if (c >= 65 && c <= 90) out += String.fromCodePoint(m.U + (c - 65));
+                    else if (c >= 97 && c <= 122) out += String.fromCodePoint(m.L + (c - 97));
+                    else if (c >= 48 && c <= 57 && m.D) out += String.fromCodePoint(m.D + (c - 48));
+                    else out += ch;
+                }
+                return out;
+            }
+            function strikeText(text) {
+                let out = '';
+                for (const ch of text) { out += ch; if (ch !== '\n' && ch !== ' ') out += STRIKE; }
+                return out;
+            }
+            function toPlain(text) {
+                let out = '';
+                for (const ch of text) {
+                    const c = ch.codePointAt(0);
+                    if (c === 0x0336 || c === 0x0332) continue;
+                    let done = false;
+                    for (const [s, e, base] of RANGES) {
+                        if (c >= s && c <= e) { out += String.fromCharCode(base + (c - s)); done = true; break; }
+                    }
+                    if (!done) out += ch;
+                }
+                return out;
+            }
+
+            // ---- Selection helpers ----
+            function getSel() { return { a: ed.selectionStart, b: ed.selectionEnd }; }
+            function replaceSel(newText, { a, b }) {
+                const before = ed.value.slice(0, a);
+                const after = ed.value.slice(b);
+                ed.value = before + newText + after;
+                const pos = a + newText.length;
+                ed.setSelectionRange(a, pos);
+                ed.focus();
+                sync();
+            }
+            function lineRange(a, b) {
+                const v = ed.value;
+                let start = v.lastIndexOf('\n', a - 1) + 1;
+                let end = v.indexOf('\n', b);
+                if (end === -1) end = v.length;
+                return { start, end };
+            }
+            function prefixLines(prefix, numbered) {
+                const { a, b } = getSel();
+                const { start, end } = lineRange(a, b);
+                const block = ed.value.slice(start, end);
+                let n = 1;
+                const newBlock = block.split('\n').map(line => {
+                    const stripped = line.replace(/^[\t ]*(?:[•‣◦✓✔☑→▪–\-\*]\s+|\d+[\.\)]\s+)/, '');
+                    if (stripped.trim() === '') return line;
+                    return numbered ? (n++ + '. ' + stripped) : (prefix + stripped);
+                }).join('\n');
+                ed.value = ed.value.slice(0, start) + newBlock + ed.value.slice(end);
+                ed.setSelectionRange(start, start + newBlock.length);
+                ed.focus();
+                sync();
+            }
+
+            // ---- Markdown convert (whole document) ----
+            function convertMarkdown() {
+                let t = ed.value;
+                t = t.replace(/\*\*\*([^\*\n]+)\*\*\*/g, (_, g) => styleText(g, 'bolditalic'));
+                t = t.replace(/\*\*([^\*\n]+)\*\*/g, (_, g) => styleText(g, 'bold'));
+                t = t.replace(/__([^_\n]+)__/g, (_, g) => styleText(g, 'bold'));
+                t = t.replace(/(^|[^\*])\*([^\*\n]+)\*(?!\*)/g, (_, p, g) => p + styleText(g, 'italic'));
+                t = t.replace(/(^|[^_])_([^_\n]+)_(?!_)/g, (_, p, g) => p + styleText(g, 'italic'));
+                t = t.replace(/~~([^~\n]+)~~/g, (_, g) => strikeText(g));
+                t = t.replace(/^[\t ]*[-\*]\s+/gm, '• ');
+                ed.value = t;
+                ed.focus();
+                sync();
+                toast('Markdown converted');
+            }
+
+            // ---- Actions ----
+            const ACTIONS = {
+                bold: () => styleSelection('bold'),
+                italic: () => styleSelection('italic'),
+                bolditalic: () => styleSelection('bolditalic'),
+                mono: () => styleSelection('mono'),
+                strike: () => {
+                    const s = getSel();
+                    if (s.a === s.b) return needSelection();
+                    replaceSel(strikeText(ed.value.slice(s.a, s.b)), s);
+                },
+                clearfmt: () => {
+                    const s = getSel();
+                    if (s.a === s.b) return needSelection();
+                    replaceSel(toPlain(ed.value.slice(s.a, s.b)), s);
+                },
+                bullet: () => prefixLines('• ', false),
+                check: () => prefixLines('✓ ', false),
+                arrow: () => prefixLines('→ ', false),
+                number: () => prefixLines('', true),
+                markdown: convertMarkdown
+            };
+            function styleSelection(style) {
+                const s = getSel();
+                if (s.a === s.b) return needSelection();
+                replaceSel(styleText(ed.value.slice(s.a, s.b), style), s);
+            }
+            function needSelection() { toast('Select some text first'); ed.focus(); }
+
+            document.getElementById('toolbar').addEventListener('click', e => {
+                const btn = e.target.closest('.tool');
+                if (!btn) return;
+                const fn = ACTIONS[btn.dataset.act];
+                if (fn) fn();
+            });
+
+            // ---- Live preview + counts ----
+            const TRUNC = 210, MAX = 3000;
+            function escapeHtml(s) {
+                return s.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+            }
+            function sync() {
+                const v = ed.value;
+                const cp = Array.from(v).length;
+                cChars.textContent = cp.toLocaleString();
+                cLines.textContent = (v === '' ? 0 : v.split('\n').length).toLocaleString();
+                cChars.classList.toggle('over', cp > MAX);
+                cChars.parentElement.classList.toggle('over', cp > MAX);
+
+                if (v.trim() === '') {
+                    preview.innerHTML = '<span class="empty">Your formatted post appears here…</span>';
+                    return;
+                }
+                const chars = Array.from(v);
+                if (truncatePreview && chars.length > TRUNC) {
+                    const shown = chars.slice(0, TRUNC).join('');
+                    preview.innerHTML = escapeHtml(shown) + '<span class="more" id="moreBtn">…more</span>';
+                    const mb = document.getElementById('moreBtn');
+                    if (mb) mb.addEventListener('click', () => { truncatePreview = false; updateToggleLabel(); sync(); });
+                } else {
+                    preview.innerHTML = escapeHtml(v);
+                }
+            }
+            function updateToggleLabel() {
+                document.getElementById('toggleTrunc').textContent = truncatePreview ? 'show full' : 'show truncated';
+            }
+            document.getElementById('toggleTrunc').addEventListener('click', () => {
+                truncatePreview = !truncatePreview; updateToggleLabel(); sync();
+            });
+
+            ed.addEventListener('input', sync);
+
+            // ---- Copy ----
+            async function copyOut() {
+                const text = ed.value;
+                if (text.trim() === '') { toast('Nothing to copy yet'); return; }
+                try {
+                    await navigator.clipboard.writeText(text);
+                    toast('Copied — paste into LinkedIn');
+                } catch (err) {
+                    // Fallback for sandboxed iframes
+                    const prevStart = ed.selectionStart, prevEnd = ed.selectionEnd;
+                    ed.focus(); ed.select();
+                    let ok = false;
+                    try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+                    ed.setSelectionRange(prevStart, prevEnd);
+                    toast(ok ? 'Copied — paste into LinkedIn' : 'Press Ctrl/Cmd + C to copy');
+                }
+            }
+            document.getElementById('copyBtn').addEventListener('click', copyOut);
+
+            document.getElementById('clearBtn').addEventListener('click', () => {
+                if (ed.value && !confirm('Clear the editor?')) return;
+                ed.value = ''; truncatePreview = true; updateToggleLabel(); sync(); ed.focus();
+            });
+
+            // ---- Toast ----
+            let toastTimer;
+            function toast(msg) {
+                toastEl.textContent = msg;
+                toastEl.classList.add('show');
+                clearTimeout(toastTimer);
+                toastTimer = setTimeout(() => toastEl.classList.remove('show'), 1900);
+            }
+
+            // Keyboard shortcuts inside the editor
+            ed.addEventListener('keydown', e => {
+                if (!(e.metaKey || e.ctrlKey)) return;
+                const k = e.key.toLowerCase();
+                if (k === 'b') { e.preventDefault(); ACTIONS.bold(); }
+                else if (k === 'i') { e.preventDefault(); ACTIONS.italic(); }
+            });
+
+            sync();
+        })();
+    </script>
+</body>
+
+</html>
