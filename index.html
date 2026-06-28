@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LinkedIn Formatter</title>
+    <title>Social Text Formatter</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
@@ -24,6 +24,39 @@
             --mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
             --body: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
             --radius: 10px;
+        }
+
+        body[data-platform="facebook"] {
+            --accent: #1877F2;
+            --accent-soft: #E7F0FE;
+        }
+
+        body[data-platform="whatsapp"] {
+            --accent: #075E54;
+            --accent-soft: #E2F3EF;
+        }
+
+        /* WhatsApp preview rendering */
+        .post code {
+            font-family: var(--mono);
+            font-size: 13px;
+            background: #F0F2F0;
+            border-radius: 4px;
+            padding: 1px 4px
+        }
+
+        .post code.wa-block {
+            display: block;
+            white-space: pre-wrap;
+            padding: 8px 10px;
+            margin: 2px 0
+        }
+
+        .post .wa-quote {
+            display: block;
+            border-left: 3px solid var(--line);
+            padding-left: 10px;
+            color: var(--muted)
         }
 
         * {
@@ -93,6 +126,44 @@
             color: var(--warn)
         }
 
+        /* Platform switch */
+        .platform-switch {
+            display: inline-flex;
+            gap: 2px;
+            padding: 3px;
+            border: 1px solid var(--line);
+            background: var(--field);
+            border-radius: 10px;
+            margin-bottom: 12px
+        }
+
+        .platform-switch button {
+            appearance: none;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-family: var(--ui);
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--muted);
+            padding: 7px 14px;
+            border-radius: 7px;
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            transition: background .12s ease, color .12s ease
+        }
+
+        .platform-switch button[aria-pressed="true"] {
+            background: var(--accent);
+            color: #fff
+        }
+
+        .platform-switch button:not([aria-pressed="true"]):hover {
+            background: var(--accent-soft);
+            color: var(--ink)
+        }
+
         /* Toolbar */
         .toolbar {
             display: flex;
@@ -159,7 +230,7 @@
         }
 
         .tool.solid:hover {
-            background: #0a6650
+            background: color-mix(in srgb, var(--accent) 85%, #000)
         }
 
         .tool.solid .lbl {
@@ -253,7 +324,7 @@
             width: 40px;
             height: 40px;
             border-radius: 50%;
-            background: linear-gradient(135deg, var(--accent), #0a4d3c);
+            background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 60%, #000));
             color: #fff;
             display: flex;
             align-items: center;
@@ -336,7 +407,7 @@
         }
 
         .btn.primary:hover {
-            background: #0a6650
+            background: color-mix(in srgb, var(--accent) 85%, #000)
         }
 
         .btn.ghost:hover {
@@ -389,7 +460,7 @@
     <div class="wrap">
         <header>
             <div>
-                <div class="eyebrow">LinkedIn formatter</div>
+                <div class="eyebrow" id="eyebrow">LinkedIn formatter</div>
                 <h1>Write it here, paste it formatted</h1>
             </div>
             <div class="counts" id="counts">
@@ -397,6 +468,12 @@
                 <div><b id="cLines">0</b> lines</div>
             </div>
         </header>
+
+        <div class="platform-switch" id="platformSwitch" role="group" aria-label="Target platform">
+            <button data-platform="linkedin" aria-pressed="true"><span>in</span> LinkedIn</button>
+            <button data-platform="facebook" aria-pressed="false"><span>f</span> Facebook</button>
+            <button data-platform="whatsapp" aria-pressed="false"><span>✆</span> WhatsApp</button>
+        </div>
 
         <div class="toolbar" id="toolbar">
             <button class="tool" data-act="bold" title="Bold (select text first)"><span class="spec">𝗔</span><span
@@ -431,7 +508,7 @@ Select a few words, then hit Bold or Italic — they turn into Unicode character
 
 Or write with **markdown**, *italics* and - dashes, then hit Convert markdown."></textarea>
 
-        <div class="hint">
+        <div class="hint" id="hint">
             Tip: highlight text, then click a style. Or write <code>**bold**</code>, <code>*italic*</code>,
             <code>~~strike~~</code>, <code>- bullets</code> and hit <b>Convert markdown</b>. LinkedIn shows <b>…more</b>
             after ~210 characters and caps posts at <b>3,000</b>.
@@ -446,7 +523,7 @@ Or write with **markdown**, *italics* and - dashes, then hit Convert markdown.">
                 <div class="ava" id="ava">JH</div>
                 <div class="who">
                     <div class="nm" id="who-nm">Your name</div>
-                    <div class="mt">Now · 🌐</div>
+                    <div class="mt" id="who-mt">Now · 🌐</div>
                 </div>
             </div>
             <div class="post" id="preview"><span class="empty">Your formatted post appears here…</span></div>
@@ -469,6 +546,31 @@ Or write with **markdown**, *italics* and - dashes, then hit Convert markdown.">
             const cLines = document.getElementById('cLines');
             const toastEl = document.getElementById('toast');
             let truncatePreview = true;
+
+            // ---- Platforms ----
+            // mode 'unicode' (LinkedIn, Facebook): style maps to Unicode glyphs the
+            //   platforms keep on paste. mode 'markup' (WhatsApp): wrap selection in the
+            //   literal *_~``` markers WhatsApp renders natively — the symbols stay in the text.
+            const PLATFORMS = {
+                linkedin: {
+                    name: 'LinkedIn', eyebrow: 'LinkedIn formatter', mode: 'unicode',
+                    trunc: 210, max: 3000, moreLabel: '…more', meta: 'Now · 🌐',
+                    hint: 'Tip: highlight text, then click a style. Or write <code>**bold**</code>, <code>*italic*</code>, <code>~~strike~~</code>, <code>- bullets</code> and hit <b>Convert markdown</b>. LinkedIn shows <b>…more</b> after ~210 characters and caps posts at <b>3,000</b>.'
+                },
+                facebook: {
+                    name: 'Facebook', eyebrow: 'Facebook formatter', mode: 'unicode',
+                    trunc: 477, max: 63206, moreLabel: 'See more', meta: 'Just now · 🌐',
+                    hint: 'Tip: highlight text, then click a style. Or write <code>**bold**</code>, <code>*italic*</code>, <code>~~strike~~</code>, <code>- bullets</code> and hit <b>Convert markdown</b>. Facebook shows <b>See more</b> after ~477 characters (desktop) and caps posts at <b>63,206</b>.'
+                },
+                whatsapp: {
+                    name: 'WhatsApp', eyebrow: 'WhatsApp formatter', mode: 'markup',
+                    trunc: 700, max: 65536, moreLabel: 'Read more', meta: 'online',
+                    hint: 'WhatsApp keeps the symbols. Highlight text and click a style to wrap it: <code>*bold*</code>, <code>_italic_</code>, <code>~strike~</code>, <code>```mono```</code>. Or write standard <code>**markdown**</code> and hit <b>Convert markdown</b> to translate it to WhatsApp syntax. Lines starting <code>&gt; </code> become quotes.'
+                }
+            };
+            let platform = PLATFORMS.linkedin;
+            // WhatsApp marker pairs for markup mode
+            const WA = { bold: ['*', '*'], italic: ['_', '_'], bolditalic: ['*_', '_*'], mono: ['```', '```'], strike: ['~', '~'] };
 
             // ---- Unicode style maps ----
             const MAPS = {
@@ -516,6 +618,28 @@ Or write with **markdown**, *italics* and - dashes, then hit Convert markdown.">
                 return out;
             }
 
+            // ---- WhatsApp markup helpers ----
+            function stripMarkup(text) {
+                return text
+                    .replace(/```([\s\S]*?)```/g, '$1')
+                    .replace(/\*_([^_]+)_\*/g, '$1')
+                    .replace(/\*([^*\n]+)\*/g, '$1')
+                    .replace(/_([^_\n]+)_/g, '$1')
+                    .replace(/~([^~\n]+)~/g, '$1')
+                    .replace(/`([^`\n]+)`/g, '$1');
+            }
+            function renderWhatsApp(raw) {
+                let s = escapeHtml(raw);
+                s = s.replace(/```([\s\S]*?)```/g, (_, g) => '<code class="wa-block">' + g + '</code>');
+                s = s.replace(/`([^`\n]+)`/g, '<code>$1</code>');
+                s = s.replace(/\*_([^_]+)_\*/g, '<b><i>$1</i></b>');
+                s = s.replace(/\*([^*\n]+)\*/g, '<b>$1</b>');
+                s = s.replace(/_([^_\n]+)_/g, '<i>$1</i>');
+                s = s.replace(/~([^~\n]+)~/g, '<s>$1</s>');
+                s = s.replace(/^&gt;\s?(.*)$/gm, '<span class="wa-quote">$1</span>');
+                return s;
+            }
+
             // ---- Selection helpers ----
             function getSel() { return { a: ed.selectionStart, b: ed.selectionEnd }; }
             function replaceSel(newText, { a, b }) {
@@ -552,7 +676,12 @@ Or write with **markdown**, *italics* and - dashes, then hit Convert markdown.">
 
             // ---- Markdown convert (whole document) ----
             function convertMarkdown() {
-                let t = ed.value;
+                ed.value = platform.mode === 'markup' ? mdToWhatsApp(ed.value) : mdToUnicode(ed.value);
+                ed.focus();
+                sync();
+                toast('Markdown converted');
+            }
+            function mdToUnicode(t) {
                 t = t.replace(/\*\*\*([^\*\n]+)\*\*\*/g, (_, g) => styleText(g, 'bolditalic'));
                 t = t.replace(/\*\*([^\*\n]+)\*\*/g, (_, g) => styleText(g, 'bold'));
                 t = t.replace(/__([^_\n]+)__/g, (_, g) => styleText(g, 'bold'));
@@ -560,27 +689,32 @@ Or write with **markdown**, *italics* and - dashes, then hit Convert markdown.">
                 t = t.replace(/(^|[^_])_([^_\n]+)_(?!_)/g, (_, p, g) => p + styleText(g, 'italic'));
                 t = t.replace(/~~([^~\n]+)~~/g, (_, g) => strikeText(g));
                 t = t.replace(/^[\t ]*[-\*]\s+/gm, '• ');
-                ed.value = t;
-                ed.focus();
-                sync();
-                toast('Markdown converted');
+                return t;
+            }
+            // Standard markdown → WhatsApp markup. Italic runs first; the [^*] guards keep
+            // it from touching ** / *** so the bold/bold-italic passes can't collide with it.
+            function mdToWhatsApp(t) {
+                t = t.replace(/(^|[^\*])\*([^\*\n]+)\*(?!\*)/g, (_, p, g) => p + '_' + g + '_');
+                t = t.replace(/\*\*\*([^\*\n]+)\*\*\*/g, (_, g) => '*_' + g + '_*');
+                t = t.replace(/\*\*([^\*\n]+)\*\*/g, (_, g) => '*' + g + '*');
+                t = t.replace(/__([^_\n]+)__/g, (_, g) => '*' + g + '*');
+                t = t.replace(/~~([^~\n]+)~~/g, (_, g) => '~' + g + '~');
+                t = t.replace(/^[\t ]*[-\*]\s+/gm, '• ');
+                return t;
             }
 
             // ---- Actions ----
             const ACTIONS = {
-                bold: () => styleSelection('bold'),
-                italic: () => styleSelection('italic'),
-                bolditalic: () => styleSelection('bolditalic'),
-                mono: () => styleSelection('mono'),
-                strike: () => {
-                    const s = getSel();
-                    if (s.a === s.b) return needSelection();
-                    replaceSel(strikeText(ed.value.slice(s.a, s.b)), s);
-                },
+                bold: () => applyStyle('bold'),
+                italic: () => applyStyle('italic'),
+                bolditalic: () => applyStyle('bolditalic'),
+                mono: () => applyStyle('mono'),
+                strike: () => applyStyle('strike'),
                 clearfmt: () => {
                     const s = getSel();
                     if (s.a === s.b) return needSelection();
-                    replaceSel(toPlain(ed.value.slice(s.a, s.b)), s);
+                    const sel = ed.value.slice(s.a, s.b);
+                    replaceSel(platform.mode === 'markup' ? stripMarkup(sel) : toPlain(sel), s);
                 },
                 bullet: () => prefixLines('• ', false),
                 check: () => prefixLines('✓ ', false),
@@ -588,10 +722,15 @@ Or write with **markdown**, *italics* and - dashes, then hit Convert markdown.">
                 number: () => prefixLines('', true),
                 markdown: convertMarkdown
             };
-            function styleSelection(style) {
+            function applyStyle(style) {
                 const s = getSel();
                 if (s.a === s.b) return needSelection();
-                replaceSel(styleText(ed.value.slice(s.a, s.b), style), s);
+                const sel = ed.value.slice(s.a, s.b);
+                let out;
+                if (platform.mode === 'markup') { const [o, c] = WA[style]; out = o + sel + c; }
+                else if (style === 'strike') { out = strikeText(sel); }
+                else { out = styleText(sel, style); }
+                replaceSel(out, s);
             }
             function needSelection() { toast('Select some text first'); ed.focus(); }
 
@@ -603,7 +742,6 @@ Or write with **markdown**, *italics* and - dashes, then hit Convert markdown.">
             });
 
             // ---- Live preview + counts ----
-            const TRUNC = 210, MAX = 3000;
             function escapeHtml(s) {
                 return s.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
             }
@@ -612,21 +750,22 @@ Or write with **markdown**, *italics* and - dashes, then hit Convert markdown.">
                 const cp = Array.from(v).length;
                 cChars.textContent = cp.toLocaleString();
                 cLines.textContent = (v === '' ? 0 : v.split('\n').length).toLocaleString();
-                cChars.classList.toggle('over', cp > MAX);
-                cChars.parentElement.classList.toggle('over', cp > MAX);
+                cChars.classList.toggle('over', cp > platform.max);
+                cChars.parentElement.classList.toggle('over', cp > platform.max);
 
                 if (v.trim() === '') {
                     preview.innerHTML = '<span class="empty">Your formatted post appears here…</span>';
                     return;
                 }
+                const renderText = platform.mode === 'markup' ? renderWhatsApp : escapeHtml;
                 const chars = Array.from(v);
-                if (truncatePreview && chars.length > TRUNC) {
-                    const shown = chars.slice(0, TRUNC).join('');
-                    preview.innerHTML = escapeHtml(shown) + '<span class="more" id="moreBtn">…more</span>';
+                if (truncatePreview && chars.length > platform.trunc) {
+                    const shown = chars.slice(0, platform.trunc).join('');
+                    preview.innerHTML = renderText(shown) + '<span class="more" id="moreBtn">' + platform.moreLabel + '</span>';
                     const mb = document.getElementById('moreBtn');
                     if (mb) mb.addEventListener('click', () => { truncatePreview = false; updateToggleLabel(); sync(); });
                 } else {
-                    preview.innerHTML = escapeHtml(v);
+                    preview.innerHTML = renderText(v);
                 }
             }
             function updateToggleLabel() {
@@ -644,7 +783,7 @@ Or write with **markdown**, *italics* and - dashes, then hit Convert markdown.">
                 if (text.trim() === '') { toast('Nothing to copy yet'); return; }
                 try {
                     await navigator.clipboard.writeText(text);
-                    toast('Copied — paste into LinkedIn');
+                    toast('Copied — paste into ' + platform.name);
                 } catch (err) {
                     // Fallback for sandboxed iframes
                     const prevStart = ed.selectionStart, prevEnd = ed.selectionEnd;
@@ -652,7 +791,7 @@ Or write with **markdown**, *italics* and - dashes, then hit Convert markdown.">
                     let ok = false;
                     try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
                     ed.setSelectionRange(prevStart, prevEnd);
-                    toast(ok ? 'Copied — paste into LinkedIn' : 'Press Ctrl/Cmd + C to copy');
+                    toast(ok ? ('Copied — paste into ' + platform.name) : 'Press Ctrl/Cmd + C to copy');
                 }
             }
             document.getElementById('copyBtn').addEventListener('click', copyOut);
@@ -679,7 +818,27 @@ Or write with **markdown**, *italics* and - dashes, then hit Convert markdown.">
                 else if (k === 'i') { e.preventDefault(); ACTIONS.italic(); }
             });
 
-            sync();
+            // ---- Platform switch ----
+            const eyebrowEl = document.getElementById('eyebrow');
+            const hintEl = document.getElementById('hint');
+            const metaEl = document.getElementById('who-mt');
+            function setPlatform(key) {
+                platform = PLATFORMS[key];
+                document.body.setAttribute('data-platform', key);
+                eyebrowEl.textContent = platform.eyebrow;
+                hintEl.innerHTML = platform.hint;
+                metaEl.textContent = platform.meta;
+                document.querySelectorAll('#platformSwitch button').forEach(b => {
+                    b.setAttribute('aria-pressed', b.dataset.platform === key ? 'true' : 'false');
+                });
+                sync();
+            }
+            document.getElementById('platformSwitch').addEventListener('click', e => {
+                const btn = e.target.closest('button');
+                if (btn) setPlatform(btn.dataset.platform);
+            });
+
+            setPlatform('linkedin');
         })();
     </script>
 </body>
